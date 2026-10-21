@@ -1,0 +1,14 @@
+<resources>
+    <string name="app_name">مواعيد العلاج</string>
+    <string name="title_appointments">المواعيد</string>
+    <string name="title_calendar">التقويم</string>
+    <string name="title_medications">الأدوية</string>
+    <string name="title_profiles">الملفات الشخصية</string>
+    <string name="title_add_appointment">إضافة موعد جديد</string>
+    <string name="title_edit_appointment">تعديل الموعد</string>
+    <string name="title_add_medication">إضافة دواء جديد</string>
+    <string name="channel_appointments_name">مواعيد العلاج</string>
+    <string name="channel_appointments_desc">تنبيهات مواعيد الكشف والزيارات الطبية</string>
+    <string name="channel_medications_name">تذكير الأدوية</string>
+    <string name="channel_medications_desc">تنبيهات مواعيد جرعات الأدوية اليومية</string>
+</resources>

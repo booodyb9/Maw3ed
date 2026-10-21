@@ -1,0 +1,6 @@
+{
+  "name": "مواعيد العلاج",
+  "description": "تطبيق متكامل لتنظيم مواعيد العلاج والمستشفيات والأدوية مع تذكيرات ذكية ومرفقات",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
