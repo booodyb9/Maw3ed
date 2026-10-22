@@ -22,16 +22,19 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
+import com.example.data.model.ProfileEntity
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun ProfileDialog(
+    profile: ProfileEntity? = null,
     onDismiss: () -> Unit,
-    onSave: (name: String, relation: String) -> Unit
+    onSave: (id: Long, name: String, relation: String) -> Unit
 ) {
-    var name by remember { mutableStateOf("") }
-    var relation by remember { mutableStateOf("الأب") }
+    var name by remember { mutableStateOf(profile?.name ?: "") }
+    var relation by remember { mutableStateOf(profile?.relation ?: "الأب") }
     var nameError by remember { mutableStateOf(false) }
 
     val presetRelations = listOf(
@@ -41,7 +44,10 @@ fun ProfileDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
-            Text("إضافة ملف شخصي جديد", style = MaterialTheme.typography.titleLarge)
+            Text(
+                if (profile != null) "تعديل بيانات الملف" else "إضافة فرد جديد",
+                style = MaterialTheme.typography.titleLarge
+            )
         },
         text = {
             Column(
@@ -54,13 +60,15 @@ fun ProfileDialog(
                         name = it
                         if (it.isNotBlank()) nameError = false
                     },
-                    label = { Text("الاسم * (مثال: الوالد، سارة)") },
+                    label = { Text("الاسم * (مثال: الوالد، سارة، أحمد)") },
                     leadingIcon = { Icon(Icons.Default.Person, contentDescription = null) },
                     isError = nameError,
                     supportingText = if (nameError) {
                         { Text("يرجى إدخال الاسم") }
                     } else null,
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("profile_name_input"),
                     shape = RoundedCornerShape(12.dp)
                 )
 
@@ -86,10 +94,11 @@ fun ProfileDialog(
                         nameError = true
                         return@Button
                     }
-                    onSave(name.trim(), relation)
-                }
+                    onSave(profile?.id ?: 0L, name.trim(), relation)
+                },
+                modifier = Modifier.testTag("save_profile_button")
             ) {
-                Text("إضافة")
+                Text(if (profile != null) "حفظ التعديل" else "إضافة")
             }
         },
         dismissButton = {

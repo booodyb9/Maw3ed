@@ -41,6 +41,9 @@ interface AppointmentDao {
     @Query("SELECT * FROM appointments WHERE profile_id = :profileId ORDER BY date_time ASC")
     fun getAppointmentsForProfileFlow(profileId: Long): Flow<List<AppointmentEntity>>
 
+    @Query("SELECT * FROM appointments WHERE profile_id = :profileId")
+    suspend fun getAppointmentsForProfile(profileId: Long): List<AppointmentEntity>
+
     @Query("SELECT * FROM appointments ORDER BY date_time ASC")
     fun getAllAppointmentsFlow(): Flow<List<AppointmentEntity>>
 
@@ -64,6 +67,9 @@ interface AppointmentDao {
 interface MedicationDao {
     @Query("SELECT * FROM medications WHERE profile_id = :profileId ORDER BY name ASC")
     fun getMedicationsForProfileFlow(profileId: Long): Flow<List<MedicationEntity>>
+
+    @Query("SELECT * FROM medications WHERE profile_id = :profileId")
+    suspend fun getMedicationsForProfile(profileId: Long): List<MedicationEntity>
 
     @Query("SELECT * FROM medications ORDER BY name ASC")
     fun getAllMedicationsFlow(): Flow<List<MedicationEntity>>

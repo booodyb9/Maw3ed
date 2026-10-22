@@ -104,17 +104,48 @@ fun CalendarScreen(
         else -> 0
     }
 
-    // Map days in month to list of appointments
-    val dayAppointmentsMap = remember(appointments, displayedYear, displayedMonth) {
+    // Map days in month to list of appointments (taking into account repeating rules)
+    val dayAppointmentsMap = remember(appointments, displayedYear, displayedMonth, daysInMonth) {
         val map = mutableMapOf<Int, MutableList<AppointmentEntity>>()
-        val tempCal = Calendar.getInstance()
-        for (a in appointments) {
-            tempCal.timeInMillis = a.dateTime
-            if (tempCal.get(Calendar.YEAR) == displayedYear &&
-                tempCal.get(Calendar.MONTH) == displayedMonth
-            ) {
-                val d = tempCal.get(Calendar.DAY_OF_MONTH)
-                map.getOrPut(d) { mutableListOf() }.add(a)
+        for (day in 1..daysInMonth) {
+            val currentCheckDay = Calendar.getInstance().apply {
+                set(displayedYear, displayedMonth, day, 0, 0, 0)
+                set(Calendar.MILLISECOND, 0)
+            }
+            for (a in appointments) {
+                val apptStartDay = Calendar.getInstance().apply {
+                    timeInMillis = a.dateTime
+                    set(Calendar.HOUR_OF_DAY, 0)
+                    set(Calendar.MINUTE, 0)
+                    set(Calendar.SECOND, 0)
+                    set(Calendar.MILLISECOND, 0)
+                }
+                if (currentCheckDay.timeInMillis < apptStartDay.timeInMillis) continue
+
+                val occurs = when (a.repeatRule()) {
+                    com.example.data.model.RepeatRule.NONE -> {
+                        val apptCal = Calendar.getInstance().apply { timeInMillis = a.dateTime }
+                        apptCal.get(Calendar.YEAR) == displayedYear &&
+                                apptCal.get(Calendar.MONTH) == displayedMonth &&
+                                apptCal.get(Calendar.DAY_OF_MONTH) == day
+                    }
+                    com.example.data.model.RepeatRule.DAILY -> true
+                    com.example.data.model.RepeatRule.EVERY_OTHER_DAY -> {
+                        val daysDiff = ((currentCheckDay.timeInMillis - apptStartDay.timeInMillis) / (24 * 60 * 60 * 1000L)).toInt()
+                        daysDiff >= 0 && daysDiff % 2 == 0
+                    }
+                    com.example.data.model.RepeatRule.WEEKLY -> {
+                        val apptCal = Calendar.getInstance().apply { timeInMillis = a.dateTime }
+                        currentCheckDay.get(Calendar.DAY_OF_WEEK) == apptCal.get(Calendar.DAY_OF_WEEK)
+                    }
+                    com.example.data.model.RepeatRule.MONTHLY -> {
+                        val apptCal = Calendar.getInstance().apply { timeInMillis = a.dateTime }
+                        day == apptCal.get(Calendar.DAY_OF_MONTH)
+                    }
+                }
+                if (occurs) {
+                    map.getOrPut(day) { mutableListOf() }.add(a)
+                }
             }
         }
         map
@@ -123,16 +154,33 @@ fun CalendarScreen(
     // Selected day appointments and active medications
     val selectedDayAppointments = dayAppointmentsMap[selectedDay] ?: emptyList()
 
-    val selectedDayDateMillis = remember(displayedYear, displayedMonth, selectedDay) {
-        Calendar.getInstance().apply {
-            set(displayedYear, displayedMonth, selectedDay, 12, 0, 0)
-        }.timeInMillis
-    }
-
-    val selectedDayMedications = remember(medications, selectedDayDateMillis) {
+    val selectedDayMedications = remember(medications, displayedYear, displayedMonth, selectedDay) {
+        val currentCheckDay = Calendar.getInstance().apply {
+            set(displayedYear, displayedMonth, selectedDay, 0, 0, 0)
+            set(Calendar.MILLISECOND, 0)
+        }
+        val checkMillis = currentCheckDay.timeInMillis
         medications.filter { med ->
-            med.startDate <= selectedDayDateMillis &&
-                    (med.endDate == null || med.endDate >= selectedDayDateMillis)
+            val startDay = Calendar.getInstance().apply {
+                timeInMillis = med.startDate
+                set(Calendar.HOUR_OF_DAY, 0)
+                set(Calendar.MINUTE, 0)
+                set(Calendar.SECOND, 0)
+                set(Calendar.MILLISECOND, 0)
+            }
+            if (checkMillis < startDay.timeInMillis) return@filter false
+            if (med.endDate != null && checkMillis > med.endDate) return@filter false
+
+            when (med.frequencyEnum()) {
+                com.example.data.model.MedicationFrequency.DAILY -> true
+                com.example.data.model.MedicationFrequency.EVERY_OTHER_DAY -> {
+                    val daysDiff = ((checkMillis - startDay.timeInMillis) / (24 * 60 * 60 * 1000L)).toInt()
+                    daysDiff >= 0 && daysDiff % 2 == 0
+                }
+                com.example.data.model.MedicationFrequency.WEEKLY -> {
+                    currentCheckDay.get(Calendar.DAY_OF_WEEK) == startDay.get(Calendar.DAY_OF_WEEK)
+                }
+            }
         }
     }
 

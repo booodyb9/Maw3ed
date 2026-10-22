@@ -7,11 +7,12 @@ import androidx.room.Index
 import androidx.room.PrimaryKey
 
 enum class RepeatRule {
-    NONE, DAILY, WEEKLY, MONTHLY;
+    NONE, DAILY, EVERY_OTHER_DAY, WEEKLY, MONTHLY;
 
     fun displayName(): String = when (this) {
         NONE -> "بدون تكرار"
         DAILY -> "يوميًا"
+        EVERY_OTHER_DAY -> "يوم بعد يوم"
         WEEKLY -> "أسبوعيًا"
         MONTHLY -> "شهريًا"
     }
@@ -19,6 +20,22 @@ enum class RepeatRule {
     companion object {
         fun fromString(value: String?): RepeatRule {
             return entries.firstOrNull { it.name.equals(value, ignoreCase = true) } ?: NONE
+        }
+    }
+}
+
+enum class MedicationFrequency {
+    DAILY, EVERY_OTHER_DAY, WEEKLY;
+
+    fun displayName(): String = when (this) {
+        DAILY -> "يوميًا"
+        EVERY_OTHER_DAY -> "يوم بعد يوم"
+        WEEKLY -> "أسبوعيًا"
+    }
+
+    companion object {
+        fun fromString(value: String?): MedicationFrequency {
+            return entries.firstOrNull { it.name.equals(value, ignoreCase = true) } ?: DAILY
         }
     }
 }
@@ -90,6 +107,8 @@ data class AppointmentEntity(
             .mapNotNull { it.trim().toIntOrNull() }
             .ifEmpty { listOf(1440, 60) }
     }
+
+    fun repeatRule(): RepeatRule = RepeatRule.fromString(repeat)
 }
 
 @Entity(
@@ -115,11 +134,17 @@ data class MedicationEntity(
     @ColumnInfo(name = "start_date")
     val startDate: Long,
     @ColumnInfo(name = "end_date")
-    val endDate: Long? = null
+    val endDate: Long? = null,
+    @ColumnInfo(name = "frequency", defaultValue = "daily")
+    val frequency: String = "daily" // "daily", "every_other_day", "weekly"
 ) {
     fun parsedTimes(): List<String> {
         return times.split(",").map { it.trim() }.filter { it.isNotEmpty() }
     }
+
+    fun frequencyEnum(): MedicationFrequency = MedicationFrequency.fromString(frequency)
+    fun isEveryOtherDay(): Boolean = frequencyEnum() == MedicationFrequency.EVERY_OTHER_DAY
+    fun isWeekly(): Boolean = frequencyEnum() == MedicationFrequency.WEEKLY
 }
 
 @Entity(

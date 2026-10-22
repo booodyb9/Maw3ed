@@ -92,20 +92,41 @@ class MawaeeViewModel(application: Application) : AndroidViewModel(application) 
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    fun saveProfile(name: String, relation: String) {
+    fun saveProfile(id: Long = 0, name: String, relation: String) {
         viewModelScope.launch(Dispatchers.IO) {
-            val entity = ProfileEntity(name = name.trim(), relation = relation.trim())
-            val id = profileDao.insert(entity)
-            if (_selectedProfileId.value == null) {
-                _selectedProfileId.value = id
+            val entity = ProfileEntity(id = id, name = name.trim(), relation = relation.trim())
+            val savedId = profileDao.insert(entity)
+            if (_selectedProfileId.value == null || id == 0L) {
+                _selectedProfileId.value = if (id == 0L) savedId else id
             }
         }
     }
 
     fun deleteProfile(profile: ProfileEntity) {
         viewModelScope.launch(Dispatchers.IO) {
+            // Cancel alarms for all appointments of this profile
+            val appts = appointmentDao.getAppointmentsForProfile(profile.id)
+            for (a in appts) {
+                AlarmScheduler.cancelAppointment(getApplication(), a.id)
+                attachmentDao.deleteForOwner("appointment", a.id)
+            }
+
+            // Cancel alarms and work for all medications of this profile
+            val meds = medicationDao.getMedicationsForProfile(profile.id)
+            for (m in meds) {
+                AlarmScheduler.cancelMedication(getApplication(), m.id)
+                com.example.service.MedicationWorkScheduler.cancelMedication(getApplication(), m.id)
+                attachmentDao.deleteForOwner("medication", m.id)
+            }
+
+            // Delete profile
             profileDao.delete(profile)
-            if (_selectedProfileId.value == profile.id) {
+
+            // If no profiles left, ensure default "أنا" profile exists
+            if (profileDao.count() == 0) {
+                val newId = profileDao.insert(ProfileEntity(name = "أنا", relation = "self"))
+                _selectedProfileId.value = newId
+            } else if (_selectedProfileId.value == profile.id) {
                 _selectedProfileId.value = null
             }
         }
@@ -159,6 +180,7 @@ class MawaeeViewModel(application: Application) : AndroidViewModel(application) 
         times: List<String>,
         startDate: Long,
         endDate: Long?,
+        frequency: String = "daily",
         onComplete: () -> Unit = {}
     ) {
         viewModelScope.launch(Dispatchers.IO) {
@@ -170,7 +192,8 @@ class MawaeeViewModel(application: Application) : AndroidViewModel(application) 
                 dose = dose?.trim()?.ifEmpty { null },
                 times = timesString,
                 startDate = startDate,
-                endDate = endDate
+                endDate = endDate,
+                frequency = frequency
             )
             val newId = medicationDao.insert(entity)
             val savedEntity = if (id == 0L) entity.copy(id = newId) else entity

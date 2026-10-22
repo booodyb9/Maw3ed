@@ -21,10 +21,12 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.FamilyRestroom
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -56,9 +58,10 @@ fun ProfilesScreen(
 ) {
     val selectedProfileId by viewModel.selectedProfileId.collectAsState()
     var profileToDelete by remember { mutableStateOf<ProfileEntity?>(null) }
+    var profileToEdit by remember { mutableStateOf<ProfileEntity?>(null) }
     var showAddDialog by remember { mutableStateOf(false) }
 
-    Column(modifier = Modifier.fillMaxSize()) {
+    Column(modifier = Modifier.fillMaxSize().testTag("profiles_screen")) {
         Card(
             modifier = Modifier
                 .fillMaxWidth()
@@ -79,15 +82,15 @@ fun ProfilesScreen(
                 Spacer(Modifier.width(16.dp))
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        "إدارة ملفات العائلة",
+                        "إدارة ملفات العائلة والأشخاص",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onPrimaryContainer
                     )
                     Text(
-                        "يمكنك تنظيم مواعيد وأدوية أفراد أسرتك في مكان واحد والتبديل بينهم بسهولة.",
+                        "أضف ملفًا لكل شخص في العائلة لمتابعة مواعيده وأدويته بشكل مستقل، أو احذف وعدل الملفات متى شئت.",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
+                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.85f)
                     )
                 }
             }
@@ -108,11 +111,12 @@ fun ProfilesScreen(
 
             Button(
                 onClick = { showAddDialog = true },
-                modifier = Modifier.testTag("add_profile_button")
+                modifier = Modifier.testTag("add_profile_button"),
+                shape = RoundedCornerShape(12.dp)
             ) {
                 Icon(Icons.Default.Add, contentDescription = null)
                 Spacer(Modifier.width(4.dp))
-                Text("إضافة فرد جديد")
+                Text("إضافة شخص جديد")
             }
         }
 
@@ -127,8 +131,8 @@ fun ProfilesScreen(
                     profile = p,
                     isSelected = isSelected,
                     onSelect = { viewModel.selectProfile(p.id) },
-                    onDelete = { profileToDelete = p },
-                    canDelete = profiles.size > 1
+                    onEdit = { profileToEdit = p },
+                    onDelete = { profileToDelete = p }
                 )
             }
         }
@@ -136,10 +140,22 @@ fun ProfilesScreen(
 
     if (showAddDialog) {
         ProfileDialog(
+            profile = null,
             onDismiss = { showAddDialog = false },
-            onSave = { name, relation ->
-                viewModel.saveProfile(name, relation)
+            onSave = { _, name, relation ->
+                viewModel.saveProfile(0L, name, relation)
                 showAddDialog = false
+            }
+        )
+    }
+
+    if (profileToEdit != null) {
+        ProfileDialog(
+            profile = profileToEdit,
+            onDismiss = { profileToEdit = null },
+            onSave = { id, name, relation ->
+                viewModel.saveProfile(id, name, relation)
+                profileToEdit = null
             }
         )
     }
@@ -147,16 +163,24 @@ fun ProfilesScreen(
     if (profileToDelete != null) {
         AlertDialog(
             onDismissRequest = { profileToDelete = null },
-            title = { Text("حذف الملف الشخصي") },
-            text = { Text("هل أنت متأكد من حذف \"${profileToDelete?.name}\"؟ سيتم حذف جميع المواعيد والأدوية والمرفقات المرتبطة به نهائيًا.") },
+            title = { Text("حذف الملف الشخصي", fontWeight = FontWeight.Bold) },
+            text = {
+                Text(
+                    "هل أنت متأكد من حذف \"${profileToDelete?.name}\"؟\nسيتم حذف جميع مواعيد الكشف والأدوية وجداول التنبيهات والمرفقات التابعة لهذا الشخص نهائيًا."
+                )
+            },
             confirmButton = {
                 Button(
                     onClick = {
                         profileToDelete?.let { viewModel.deleteProfile(it) }
                         profileToDelete = null
-                    }
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error
+                    ),
+                    modifier = Modifier.testTag("confirm_delete_profile_button")
                 ) {
-                    Text("حذف الملف")
+                    Text("نعم، تأكيد الحذف")
                 }
             },
             dismissButton = {
@@ -173,8 +197,8 @@ fun ProfileCard(
     profile: ProfileEntity,
     isSelected: Boolean,
     onSelect: () -> Unit,
-    onDelete: () -> Unit,
-    canDelete: Boolean
+    onEdit: () -> Unit,
+    onDelete: () -> Unit
 ) {
     Card(
         modifier = Modifier
@@ -183,7 +207,7 @@ fun ProfileCard(
             .testTag("profile_card_${profile.id}"),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
-            containerColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)
+            containerColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f)
             else MaterialTheme.colorScheme.surface
         ),
         border = if (isSelected) CardDefaults.outlinedCardBorder().copy(
@@ -193,7 +217,7 @@ fun ProfileCard(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
+                .padding(14.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Surface(
@@ -210,14 +234,26 @@ fun ProfileCard(
                 }
             }
 
-            Spacer(Modifier.width(16.dp))
+            Spacer(Modifier.width(14.dp))
 
             Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = profile.name,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = profile.name,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    if (isSelected) {
+                        Spacer(Modifier.width(6.dp))
+                        Icon(
+                            Icons.Default.CheckCircle,
+                            contentDescription = "الملف النشط حاليًا",
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                }
+                Spacer(Modifier.height(2.dp))
                 Text(
                     text = "صلة القرابة: ${profile.relation}",
                     style = MaterialTheme.typography.bodySmall,
@@ -225,18 +261,23 @@ fun ProfileCard(
                 )
             }
 
-            if (isSelected) {
-                Icon(
-                    Icons.Default.CheckCircle,
-                    contentDescription = "الملف النشط حاليًا",
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(28.dp)
-                )
-                Spacer(Modifier.width(8.dp))
-            }
+            // Action Buttons: Edit and Delete
+            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                IconButton(
+                    onClick = onEdit,
+                    modifier = Modifier.testTag("edit_profile_${profile.id}")
+                ) {
+                    Icon(
+                        Icons.Default.Edit,
+                        contentDescription = "تعديل الملف الشخصي",
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
 
-            if (canDelete) {
-                IconButton(onClick = onDelete) {
+                IconButton(
+                    onClick = onDelete,
+                    modifier = Modifier.testTag("delete_profile_${profile.id}")
+                ) {
                     Icon(
                         Icons.Default.Delete,
                         contentDescription = "حذف الملف الشخصي",

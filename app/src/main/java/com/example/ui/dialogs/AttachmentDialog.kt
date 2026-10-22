@@ -70,6 +70,8 @@ fun AttachmentDialog(
     val attachments by viewModel.getAttachments(ownerType, ownerId).collectAsState(initial = emptyList())
     var selectedFullImage by remember { mutableStateOf<String?>(null) }
 
+    var attachmentToDelete by remember { mutableStateOf<AttachmentEntity?>(null) }
+
     val photoPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia()
     ) { uri: Uri? ->
@@ -152,7 +154,7 @@ fun AttachmentDialog(
                             AttachmentItem(
                                 attachment = attachment,
                                 onClick = { selectedFullImage = attachment.path },
-                                onDelete = { viewModel.deleteAttachment(attachment) }
+                                onDelete = { attachmentToDelete = attachment }
                             )
                         }
                     }
@@ -209,6 +211,32 @@ fun AttachmentDialog(
                 }
             }
         }
+    }
+
+    if (attachmentToDelete != null) {
+        AlertDialog(
+            onDismissRequest = { attachmentToDelete = null },
+            title = { Text("حذف المرفق") },
+            text = { Text("هل أنت متأكد من حذف هذه الصورة/الروشتة نهائيًا؟") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        attachmentToDelete?.let { viewModel.deleteAttachment(it) }
+                        attachmentToDelete = null
+                    },
+                    colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error
+                    )
+                ) {
+                    Text("حذف")
+                }
+            },
+            dismissButton = {
+                OutlinedButton(onClick = { attachmentToDelete = null }) {
+                    Text("إلغاء")
+                }
+            }
+        )
     }
 }
 

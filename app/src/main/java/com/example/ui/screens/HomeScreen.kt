@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
@@ -267,6 +268,21 @@ fun MainScreen(
                                 modifier = Modifier.padding(end = 8.dp)
                             )
                         }
+                        item {
+                            androidx.compose.material3.InputChip(
+                                selected = false,
+                                onClick = { showAddProfileDialog = true },
+                                label = { Text("+ شخص جديد") },
+                                leadingIcon = {
+                                    Icon(
+                                        Icons.Default.Add,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                },
+                                modifier = Modifier.padding(end = 8.dp)
+                            )
+                        }
                     }
                 }
             }
@@ -363,14 +379,15 @@ fun MainScreen(
             profiles = profiles,
             initialProfileId = selectedProfileId,
             onDismiss = { showAddMedicationDialog = false },
-            onSave = { _, profileId, name, dose, times, startDate, endDate ->
+            onSave = { _, profileId, name, dose, times, startDate, endDate, frequency ->
                 viewModel.saveMedication(
                     profileId = profileId,
                     name = name,
                     dose = dose,
                     times = times,
                     startDate = startDate,
-                    endDate = endDate
+                    endDate = endDate,
+                    frequency = frequency
                 )
                 showAddMedicationDialog = false
             }
@@ -380,9 +397,10 @@ fun MainScreen(
     // Add Profile Dialog
     if (showAddProfileDialog) {
         ProfileDialog(
+            profile = null,
             onDismiss = { showAddProfileDialog = false },
-            onSave = { name, relation ->
-                viewModel.saveProfile(name, relation)
+            onSave = { _, name, relation ->
+                viewModel.saveProfile(0L, name, relation)
                 showAddProfileDialog = false
             }
         )

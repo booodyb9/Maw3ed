@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -20,6 +21,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AccessTime
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.LocationOn
@@ -74,6 +76,7 @@ fun AddAppointmentScreen(
     var location by remember { mutableStateOf("") }
     var notes by remember { mutableStateOf("") }
     var titleError by remember { mutableStateOf(false) }
+    var showNewProfileDialog by remember { mutableStateOf(false) }
 
     var selectedProfileId by remember(profiles, currentSelectedProfileId) {
         mutableLongStateOf(
@@ -156,6 +159,18 @@ fun AddAppointmentScreen(
                             }
                         )
                     }
+                    androidx.compose.material3.InputChip(
+                        selected = false,
+                        onClick = { showNewProfileDialog = true },
+                        label = { Text("+ فرد جديد") },
+                        leadingIcon = {
+                            Icon(
+                                Icons.Default.Add,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+                    )
                 }
             }
 
@@ -394,5 +409,16 @@ fun AddAppointmentScreen(
                 )
             }
         }
+    }
+
+    if (showNewProfileDialog) {
+        com.example.ui.dialogs.ProfileDialog(
+            profile = null,
+            onDismiss = { showNewProfileDialog = false },
+            onSave = { _, name, relation ->
+                viewModel.saveProfile(0L, name, relation)
+                showNewProfileDialog = false
+            }
+        )
     }
 }

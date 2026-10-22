@@ -3,8 +3,6 @@ package com.example.service
 import android.content.Context
 import androidx.work.Data
 import androidx.work.ExistingPeriodicWorkPolicy
-import androidx.work.ExistingWorkPolicy
-import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import com.example.data.AppDatabase
@@ -25,6 +23,17 @@ object MedicationWorkScheduler {
             return
         }
 
+        val isEveryOtherDay = medication.isEveryOtherDay()
+        val isWeekly = medication.isWeekly()
+
+        val startCal = Calendar.getInstance().apply {
+            timeInMillis = medication.startDate
+            set(Calendar.HOUR_OF_DAY, 0)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }
+
         val times = medication.parsedTimes()
         for ((index, timeStr) in times.withIndex()) {
             val parts = timeStr.split(":")
@@ -43,7 +52,22 @@ object MedicationWorkScheduler {
                 targetCal.add(Calendar.DAY_OF_YEAR, 1)
             }
 
-            val delayMillis = targetCal.timeInMillis - now
+            if (isEveryOtherDay) {
+                while (true) {
+                    val daysDiff = ((targetCal.timeInMillis - startCal.timeInMillis) / (24 * 60 * 60 * 1000L)).toInt()
+                    if (daysDiff >= 0 && daysDiff % 2 == 0) {
+                        break
+                    }
+                    targetCal.add(Calendar.DAY_OF_YEAR, 1)
+                }
+            } else if (isWeekly) {
+                val startDayOfWeek = startCal.get(Calendar.DAY_OF_WEEK)
+                while (targetCal.get(Calendar.DAY_OF_WEEK) != startDayOfWeek) {
+                    targetCal.add(Calendar.DAY_OF_YEAR, 1)
+                }
+            }
+
+            val delayMillis = (targetCal.timeInMillis - now).coerceAtLeast(0L)
 
             val inputData = Data.Builder()
                 .putLong(MedicationReminderWorker.KEY_MED_ID, medication.id)
@@ -53,9 +77,14 @@ object MedicationWorkScheduler {
                 .putString(MedicationReminderWorker.KEY_TIME_SLOT, timeStr)
                 .build()
 
-            // 24-hour repeating WorkRequest for each dose time
+            val intervalHours = when {
+                isEveryOtherDay -> 48L
+                isWeekly -> 168L
+                else -> 24L
+            }
+
             val periodicWork = PeriodicWorkRequestBuilder<MedicationReminderWorker>(
-                24, TimeUnit.HOURS,
+                intervalHours, TimeUnit.HOURS,
                 15, TimeUnit.MINUTES
             )
                 .setInitialDelay(delayMillis, TimeUnit.MILLISECONDS)

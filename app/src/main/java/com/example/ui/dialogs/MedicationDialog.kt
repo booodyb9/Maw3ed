@@ -64,12 +64,14 @@ fun MedicationDialog(
         dose: String?,
         times: List<String>,
         startDate: Long,
-        endDate: Long?
+        endDate: Long?,
+        frequency: String
     ) -> Unit
 ) {
     val context = LocalContext.current
     var name by remember { mutableStateOf(medication?.name ?: "") }
     var dose by remember { mutableStateOf(medication?.dose ?: "") }
+    var selectedFrequency by remember { mutableStateOf(medication?.frequency ?: "daily") }
     var nameError by remember { mutableStateOf(false) }
 
     var selectedProfileId by remember {
@@ -217,6 +219,26 @@ fun MedicationDialog(
                     }
                 }
 
+                // Frequency (daily, every other day, weekly)
+                Text("تكرار العلاج:", style = MaterialTheme.typography.labelLarge)
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    val frequencies = listOf(
+                        "daily" to "يوميًا",
+                        "every_other_day" to "يوم بعد يوم",
+                        "weekly" to "أسبوعيًا"
+                    )
+                    frequencies.forEach { (freqKey, freqLabel) ->
+                        FilterChip(
+                            selected = selectedFrequency == freqKey,
+                            onClick = { selectedFrequency = freqKey },
+                            label = { Text(freqLabel) }
+                        )
+                    }
+                }
+
                 // Dates (Start and End)
                 Text("مدة العلاج:", style = MaterialTheme.typography.labelLarge)
                 Row(
@@ -306,7 +328,8 @@ fun MedicationDialog(
                         dose,
                         finalTimes,
                         startDate,
-                        endDate
+                        endDate,
+                        selectedFrequency
                     )
                 }
             ) {

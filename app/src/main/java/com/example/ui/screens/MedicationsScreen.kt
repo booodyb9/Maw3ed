@@ -131,7 +131,7 @@ fun MedicationsScreen(
             profiles = profiles,
             initialProfileId = medToEdit?.profileId,
             onDismiss = { medToEdit = null },
-            onSave = { id, profileId, name, dose, times, startDate, endDate ->
+            onSave = { id, profileId, name, dose, times, startDate, endDate, frequency ->
                 viewModel.saveMedication(
                     id = id,
                     profileId = profileId,
@@ -139,7 +139,8 @@ fun MedicationsScreen(
                     dose = dose,
                     times = times,
                     startDate = startDate,
-                    endDate = endDate
+                    endDate = endDate,
+                    frequency = frequency
                 )
                 medToEdit = null
             }
@@ -212,11 +213,19 @@ fun MedicationCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                SuggestionChip(
-                    onClick = {},
-                    label = { Text(profileName, style = MaterialTheme.typography.labelSmall) },
-                    icon = { Icon(Icons.Default.Person, contentDescription = null) }
-                )
+                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    SuggestionChip(
+                        onClick = {},
+                        label = { Text(profileName, style = MaterialTheme.typography.labelSmall) },
+                        icon = { Icon(Icons.Default.Person, contentDescription = null) }
+                    )
+                    if (!medication.frequency.equals("daily", ignoreCase = true)) {
+                        SuggestionChip(
+                            onClick = {},
+                            label = { Text(medication.frequencyEnum().displayName(), style = MaterialTheme.typography.labelSmall) }
+                        )
+                    }
+                }
 
                 Row {
                     IconButton(onClick = onEdit) {
